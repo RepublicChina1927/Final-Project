@@ -1,0 +1,28 @@
+﻿<h3>ToolBar</h3>
+
+@using Blazor.Extensions.Canvas;
+@using System;
+
+
+<div class="toolbar">
+    <button @onclick="() => SelectTool(ToolBar.Tool.Select)">Select</button>
+    <button @onclick="() => SelectTool(ToolBar.Tool.Rectangle)">Rectangle</button>
+    <button @onclick="() => SelectTool(ToolBar.Tool.Oval)">Oval</button>
+</div>
+
+@code {
+    public enum Tool
+    {
+        Select,
+        Rectangle,
+        Oval
+    }
+
+    [Parameter]
+    public EventCallback<Tool> OnToolSelected { get; set; }
+
+    private void SelectTool(Tool tool)
+    {
+        OnToolSelected.InvokeAsync(tool);
+    }
+}

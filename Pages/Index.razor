@@ -1,0 +1,388 @@
+﻿@page "/"
+
+@using Blazor.Extensions;
+@using Blazor.Extensions.Canvas;
+@using Blazor.Extensions.Canvas.Canvas2D;
+@using System;
+@using System.Collections.Generic;
+@using System.Drawing;
+@using System.Linq;
+
+<PageTitle>Index</PageTitle>
+
+<div class="row">
+    <div class="col-11">
+        <div tabindex="0" @onpointerdown="OnMouseDown" @onpointerup="OnMouseUp" @onpointermove="OnMouseMove">
+            <BECanvas Width="1000" Height="1000" @ref="_canvasReference"></BECanvas>
+        </div>
+    </div>
+    <div class="col-1">
+        <div class="toolbar">
+            <button @onclick="() => SelectTool(Tool.Select)">Select</button>
+            <button @onclick="() => SelectTool(Tool.Rectangle)">Rectangle</button>
+            <button @onclick="() => SelectTool(Tool.Oval)">Oval</button>
+        </div>
+    
+        <div class="color-pallet">
+           <button class="color" style="background-color: black;" @onclick='() => SelectColor("black")'>Select</button>
+           <button class="color" style="background-color: red;" @onclick='() => SelectColor("red")'>Select</button>
+           <button class="color" style="background-color: green;" @onclick='() => SelectColor("green")'>Select</button>
+           <button class="color" style="background-color: blue;" @onclick='() => SelectColor("blue")'>Select</button>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    public enum Tool
+    {
+        Select,
+        Rectangle,
+        Oval,
+    }
+
+
+
+    private void SelectTool(Tool tool)
+    {
+        currentTool = tool;
+    }
+
+    private void SelectColor(string color)
+    {
+        currentColor = color;
+    }
+
+    Tool currentTool;
+    string currentColor;
+
+    protected BECanvasComponent _canvasReference;
+    private Canvas2DContext _context;
+
+    class Square : Shape
+    {
+        public override async Task Draw(Canvas2DContext context)
+        {
+            await context.SetFillStyleAsync(Color);
+            await context.FillRectAsync(X - Width / 2, Y - Height / 2, Width, Height);
+            // Use Width and Height instead of Size
+
+            if (_Isselected)
+            {
+                await context.FillRectAsync(X - Width / 2 - 5, Y - Height / 2 - 5, 10, 10);
+
+                await context.FillRectAsync(X + Width / 2 - 5, Y - Height / 2 - 5, 10, 10);
+
+                await context.FillRectAsync(X - Width / 2 - 5, Y + Height / 2 - 5, 10, 10);
+
+                await context.FillRectAsync(X + Width / 2 - 5, Y + Height / 2 - 5, 10, 10);
+
+
+            }
+        }
+
+        public override bool Contains(double x, double y)
+        {
+            // Check if the point is inside the rectangle using the formula
+            return (X - Width / 2 - 5 <= x && x <= X + Width / 2 + 5 && Y - Height / 2 - 5 <= y && y <= Y + Height / 2 + 5); // Use Width and Height instead of Size
+        }
+
+        public override bool InsideTheBoundary(double x, double y)
+        {
+            return (X - Width / 2 <= x && x <= X + Width / 2 && Y - Height / 2 <= y && y <= Y + Height / 2);
+        }
+    }
+
+    class Oval : Shape
+    {
+        public override async Task Draw(Canvas2DContext context)
+        {
+            await context.BeginPathAsync();
+            await context.SetFillStyleAsync(Color);
+            await context.ArcAsync(X, Y, Width / 2, 0, 2 * Math.PI); // Use Width instead of Size
+            await context.FillAsync();
+            await context.ClosePathAsync();
+
+            if (_Isselected)
+            {
+                await context.FillRectAsync(X - Width / 2 - 5, Y, 10, 10);
+
+                await context.FillRectAsync(X, Y - Width / 2 - 5, 10, 10);
+
+                await context.FillRectAsync(X + Width / 2 - 5, Y, 10, 10);
+
+                await context.FillRectAsync(X, Y + Width / 2 - 5, 10, 10);
+
+
+            }
+        }
+
+        public override bool Contains(double x, double y)
+        {
+            // Check if the point is inside the ellipse using the formula
+            if (X - Width / 2 - 5 <= x && x <= X + Width / 2 + 5 && Y - Height / 2 - 5 <= y && y <= Y + Height / 2 + 5)
+            {
+                double x1 = x - X;
+                double y1 = y - Y;
+
+
+
+                // Check if the point is inside the ellipse
+                return ((x1 * x1) / ((Width / 2 + 5) * (Width / 2 + 5)) + (y1 * y1) / ((Height / 2 + 5) * (Height / 2 + 5)) <= 1);
+            }
+
+            return false;
+        }
+
+        public override bool InsideTheBoundary(double x, double y)
+        {
+            if (X - Width / 2 <= x && x <= X + Width / 2 && Y - Height / 2 <= y && y <= Y + Height / 2)
+            {
+                double x1 = x - X;
+                double y1 = y - Y;
+
+                // Adjust the squared widths to account for the 5-unit margin around the ellipse
+
+
+                // Check if the point is inside the ellipse
+                return ((x1 * x1) / ((Width / 2) * (Width / 2)) + (y1 * y1) / ((Height / 2) * (Height / 2)) <= 1);
+
+            }
+
+            return false;
+        }
+    }
+
+    public class Coordinates
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+    }
+
+    abstract class Shape
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+
+        public double Width { get; set; } // Use Width instead of Size
+        public double Height { get; set; } // Use Height instead of Size
+        public string Color { get; set; }
+
+        public int Z { get; set; }
+
+        public bool _Isselected { get; set; }
+
+        public Coordinates Center
+        {
+            get { return new Coordinates { X = X + Width / 2, Y = Y + Height / 2 }; } // Use Width and Height instead of Size
+        }
+
+        public abstract Task Draw(Canvas2DContext context);
+
+        public abstract bool Contains(double x, double y);
+        // Make this method abstract so that each subclass can implement it differently
+
+        public abstract bool InsideTheBoundary(double x, double y);
+
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+
+        _context = await _canvasReference.CreateCanvas2DAsync();
+    }
+    private List<Shape> _shapes = new List<Shape>();
+    private Shape _selectedShape = null;
+    private bool _isDragging = false;
+    private bool _isResizing = false;
+    private double _dragOffsetX = 0;
+    private double _dragOffsetY = 0;
+
+    private Shape smallrectangle1 = new Square();
+
+    protected async Task OnMouseDown(PointerEventArgs e)
+    {
+        double clickx = Convert.ToInt32(e.OffsetX);
+        double clicky = Convert.ToInt32(e.OffsetY);
+
+
+
+        if (clickx > 600 || clicky > 600) return;
+
+        if (e.Button == 0)
+        {
+            Shape shape = null;
+
+
+
+            switch (currentTool)
+            {
+                case Tool.Rectangle:
+                    shape = new Square
+                        {
+                            X = clickx,
+                            Y = clicky,
+                            Width = 10, // Use Width instead of Size
+                            Height = 10, // Use Height instead of Size
+                            Color = currentColor            // Color = Color.FromName(currentColor)
+
+
+                       };
+
+                    _isResizing = true;
+
+                    break;
+
+                case Tool.Oval:
+                    shape = new Oval
+                        {
+                            X = clickx,
+                            Y = clicky,
+                            Width = 10, // Use Width instead of Size
+                            Height = 10, // Use Height instead of Size
+                            Color = currentColor
+                        };
+
+                    _isResizing = true;
+
+                    break;
+                case Tool.Select:
+
+
+
+                    shape = _shapes.OrderByDescending(s => s.Z).FirstOrDefault(s => s.Contains(clickx, clicky));
+                    // find the shape under mouse cursor
+
+                    foreach (var s in _shapes)
+                    {
+                        s._Isselected = false;
+                    }
+
+                    await DrawCanvas();
+
+
+                    if (shape != null)
+                    {
+                        shape._Isselected = true;
+
+                        shape.Color = currentColor;
+
+
+                        _isResizing = true;
+                        _dragOffsetX = clickx - shape.X;
+                        _dragOffsetY = clicky - shape.Y;
+
+
+                        if(shape.InsideTheBoundary(clickx, clicky))
+                        {
+                            shape._Isselected = true;
+
+                            _isResizing = false;
+
+                            _isDragging = true;
+
+                            _dragOffsetX = clickx - shape.X;
+                            _dragOffsetY = clicky - shape.Y;
+
+                        }
+
+                        
+                    }
+
+                    else
+                    {
+                        return; // or handle the case where shape is null
+                    }
+               
+                    break;
+            }
+
+            if (shape != null)
+            {
+                _shapes.Add(shape);
+                _selectedShape = shape;
+                shape.Z = _shapes.Max(s => s.Z) + 1;
+                await shape.Draw(_context);
+
+            }
+
+            else
+            {
+                return; // or handle the case where shape is null
+            }
+
+
+        }
+        
+    }
+
+    protected async Task OnMouseUp(PointerEventArgs e)
+    {
+        _isDragging = false;
+        _isResizing = false;
+
+
+    }
+
+    
+
+    protected async Task OnMouseMove(PointerEventArgs e)
+    {
+        double movex = Convert.ToInt32(e.OffsetX);
+        double movey = Convert.ToInt32(e.OffsetY);
+        if (movex > 600 || movey > 600) return;
+        if (_selectedShape != null)
+        {
+            if (_isResizing)
+            {
+                // Calculate the new width and height based on the difference between the current and initial mouse positions
+                double deltaX = movex - _selectedShape.X;
+                double deltaY = movey - _selectedShape.Y;
+                _selectedShape.Width = Math.Abs(deltaX); // Use Math.Abs to adjust the width
+                _selectedShape.Height = Math.Abs(deltaY);
+                // Use Math.Abs to adjust the height
+
+                await DrawCanvas();
+
+
+            }
+            if (_isDragging)
+            {
+                // Move the shape to the current mouse position
+                _selectedShape.X = movex;
+                _selectedShape.Y = movey;
+
+                await DrawCanvas();
+            }
+
+            // Redraw the canvas to reflect the changes
+          
+        }
+    }
+
+
+    public async Task DrawCanvas()
+    {
+        await _context.ClearRectAsync(0, 0, 1000, 1000);
+        foreach (var s in _shapes)
+        {
+            await s.Draw(_context);
+        }
+    }
+
+    private void OnToolSelected(Tool tool)
+    {
+        currentTool = tool;
+    }
+
+    private void OnColorSelected(string color)
+    {
+        currentColor = color;
+    }
+
+
+}
+            
+ 

@@ -1,0 +1,18 @@
+﻿<h3>ColorPallet</h3>
+
+<div class="color-pallet">
+    <div class="color" style="background-color: black;" @onclick='() => SelectColor("black")'></div>
+    <div class="color" style="background-color: red;" @onclick='() => SelectColor("red")'></div>
+    <div class="color" style="background-color: green;" @onclick='() => SelectColor("green")'></div>
+    <div class="color" style="background-color: blue;" @onclick='() => SelectColor("blue")'></div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnColorSelected { get; set; }
+
+    private void SelectColor(string color)
+    {
+        OnColorSelected.InvokeAsync(color);
+    }
+}
